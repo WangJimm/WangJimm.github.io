@@ -1,0 +1,12 @@
+:root{
+    --green: #00FF00;
+    --white: #ffffff;
+    --black: #000000;
+    --day: #75b7e3;
+    --night: #968160;
+
+}
+
+canvas{
+    background-color: var(--black);
+}
