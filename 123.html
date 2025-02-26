@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月經記錄與推算</title>
+  <!-- 引入 Google Fonts 的 Pacifico 字體，營造可愛風格 -->
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Pacifico', cursive;
+      background: linear-gradient(135deg, #ffe6f2, #ffffff);
+      color: #d63384;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background-color: #fff0f6;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    h1, h2 {
+      text-align: center;
+      margin: 0.5rem;
+    }
+    form, .records, .prediction {
+      margin-top: 1.5rem;
+    }
+    label {
+      display: inline-block;
+      width: 120px;
+    }
+    input[type="date"] {
+      padding: 5px;
+      font-size: 1rem;
+      border: 2px solid #f8bbd0;
+      border-radius: 6px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background-color: #ff80ab;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #ff4081;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 0.5rem;
+      border-bottom: 1px dashed #f48fb1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #ffe4e1;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .edit-btn {
+      margin-left: 10px;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.5rem;
+      background-color: #ff80ab;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .edit-btn:hover {
+      background-color: #ff4081;
+    }
+    /* IKEA 玩偶裝飾 */
+    .ikea-dolls {
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      display: flex;
+      flex-wrap: wrap;
+      opacity: 0.5;
+    }
+    .ikea-dolls img {
+      width: 60px;
+      height: 60px;
+      margin: 5px;
+      border-radius: 50%;
+      border: 2px solid #ff80ab;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- IKEA 玩偶裝飾，可以依需求更換成真實圖片 -->
+    <div class="ikea-dolls">
+      <img src="https://via.placeholder.com/60/FFC0CB/000000?text=IKEA" alt="IKEA Doll">
+      <img src="https://via.placeholder.com/60/FFC0CB/000000?text=IKEA" alt="IKEA Doll">
+      <img src="https://via.placeholder.com/60/FFC0CB/000000?text=IKEA" alt="IKEA Doll">
+      <img src="https://via.placeholder.com/60/FFC0CB/000000?text=IKEA" alt="IKEA Doll">
+      <img src="https://via.placeholder.com/60/FFC0CB/000000?text=IKEA" alt="IKEA Doll">
+    </div>
+    
+    <h1>月經記錄與推算</h1>
+  
+    <!-- 記錄輸入區 -->
+    <form id="menstruationForm">
+      <div>
+        <label for="periodStart">開始日期：</label>
+        <input type="date" id="periodStart" name="periodStart" required>
+      </div>
+      <div>
+        <button type="submit">新增記錄</button>
+      </div>
+    </form>
+
+    <!-- 記錄列表 -->
+    <section class="records">
+      <h2>記錄列表</h2>
+      <ul id="recordList"></ul>
+    </section>
+
+    <!-- 推算功能 -->
+    <section class="prediction">
+      <button id="predictBtn">推算下次月經日期</button>
+      <h2 id="predictionResult"></h2>
+    </section>
+  </div>
+
+  <script>
+    // 用來儲存所有記錄的日期（Date 物件）
+    let records = [];
+    const form = document.getElementById('menstruationForm');
+    const recordList = document.getElementById('recordList');
+    const predictionResult = document.getElementById('predictionResult');
+    const predictBtn = document.getElementById('predictBtn');
+
+    // 從 localStorage 讀取資料
+    function loadRecords() {
+      const savedRecords = localStorage.getItem('menstruationRecords');
+      if (savedRecords) {
+        try {
+          const parsed = JSON.parse(savedRecords);
+          records = parsed.map(dateStr => new Date(dateStr));
+          records.sort((a, b) => a - b);
+          updateRecordList();
+        } catch (e) {
+          console.error("讀取記錄錯誤:", e);
+        }
+      }
+    }
+
+    // 將 records 儲存到 localStorage
+    function saveRecords() {
+      localStorage.setItem('menstruationRecords', JSON.stringify(records));
+    }
+
+    loadRecords();
+
+    // 表單提交時新增記錄
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const dateInput = document.getElementById('periodStart').value;
+      if (dateInput) {
+        records.push(new Date(dateInput));
+        records.sort((a, b) => a - b);
+        updateRecordList();
+        saveRecords();
+        form.reset();
+        predictionResult.textContent = "";
+      }
+    });
+
+    // 更新記錄列表的顯示，並增加修改按鈕
+    function updateRecordList() {
+      recordList.innerHTML = '';
+      records.forEach(function(date, index) {
+        const li = document.createElement('li');
+        const dateSpan = document.createElement('span');
+        dateSpan.textContent = date.toISOString().split('T')[0];
+        li.appendChild(dateSpan);
+        
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '修改';
+        editBtn.className = 'edit-btn';
+        editBtn.addEventListener('click', function() {
+          editRecord(index);
+        });
+        li.appendChild(editBtn);
+        recordList.appendChild(li);
+      });
+    }
+
+    // 修改指定紀錄的日期
+    function editRecord(index) {
+      const currentDate = records[index];
+      const currentStr = currentDate.toISOString().split('T')[0];
+      const newDateStr = prompt("請輸入新的日期 (YYYY-MM-DD)", currentStr);
+      if (newDateStr) {
+        const newDate = new Date(newDateStr);
+        if (newDate.toString() === "Invalid Date") {
+          alert("無效的日期格式！");
+          return;
+        }
+        records[index] = newDate;
+        records.sort((a, b) => a - b);
+        updateRecordList();
+        saveRecords();
+        predictionResult.textContent = "";
+      }
+    }
+
+    // 推算下次月經日期
+    predictBtn.addEventListener('click', function() {
+      if (records.length < 2) {
+        predictionResult.textContent = "請至少輸入兩筆記錄以進行推算。";
+        return;
+      }
+      let totalDiff = 0;
+      for (let i = 1; i < records.length; i++) {
+        const diff = (records[i] - records[i - 1]) / (1000 * 60 * 60 * 24);
+        totalDiff += diff;
+      }
+      const avgCycle = totalDiff / (records.length - 1);
+      const lastPeriod = records[records.length - 1];
+      const predictedDate = new Date(lastPeriod.getTime() + avgCycle * 24 * 60 * 60 * 1000);
+      predictionResult.textContent = "推測的下次月經開始日期： " + predictedDate.toISOString().split('T')[0];
+    });
+  </script>
+</body>
+</html>
